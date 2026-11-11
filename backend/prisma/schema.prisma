@@ -1,0 +1,166 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider     = "prisma-client-js"
+  output       = "../generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  SELLER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  userName  String   @unique
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  phoneNo   String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relation
+  addresses Address[]
+  products  Product[]
+  orders    Order[]
+
+  // index
+  // @@index([email])  // not needed because @unique already creates an index
+  cart Cart?
+}
+
+model Address {
+  id           String   @id @default(uuid())
+  userId       String
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String
+  country      String
+  pincode      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // relation
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // index
+  @@index([userId])
+}
+
+model Category {
+  id                  String   @id @default(uuid())
+  // userId              String // not needed
+  categoryName        String   @unique
+  categoryDescription String?
+  createdAt           DateTime @default(now())
+
+  // relation
+  // user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  product Product[]
+}
+
+model Product {
+  id                 String   @id @default(uuid())
+  userId             String
+  categoryId         String
+  productName        String
+  productDescription String
+  productImageUrl    String[]
+  productPrice       Decimal  @db.Decimal(10, 2)
+  stock              Int
+  rating             Decimal  @db.Decimal(2, 1)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // relation
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   Category    @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+
+  // index
+  @@index([categoryId])
+  @@index([createdAt])
+}
+
+model Order {
+  id         String      @id @default(uuid())
+  userId     String
+  totalPrice Decimal     @db.Decimal(10, 2)
+  totalItems Int
+  status     OrderStatus @default(PENDING)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  // relation
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items OrderItem[]
+
+  // index
+  @@index([userId])
+}
+
+model OrderItem {
+  id              String   @id @default(uuid())
+  orderId         String
+  productId       String
+  quantity        Int
+  priceAtPurchase Decimal  @db.Decimal(10, 2)
+  createdAt       DateTime @default(now())
+
+  // relation
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  // index
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relation
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relation
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId]) // the combination of cartId and productId must be unique.
+}
+
