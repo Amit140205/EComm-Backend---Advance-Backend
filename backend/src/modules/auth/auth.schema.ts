@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { email, z } from "zod";
 
 export const registerUserSchema = z.object({
     firstName: z.string().min(1, "First name cannot be empty"),
@@ -11,4 +11,10 @@ export const registerUserSchema = z.object({
         .max(14, { message: 'Must be a valid mobile number' }),
 }).strict();
 
+export const loginUserSchema = z.object({
+    email: z.email(),
+    password: z.string()
+}).strict();
+
 export type RegisterUserDTO = z.infer<typeof registerUserSchema>;
+export type LoginUserDTO = z.infer<typeof loginUserSchema>;
