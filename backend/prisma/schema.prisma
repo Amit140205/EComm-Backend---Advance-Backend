@@ -28,8 +28,7 @@ enum OrderStatus {
 model User {
   id        String   @id @default(uuid())
   firstName String
-  lastName  String
-  userName  String   @unique
+  lastName  String?
   email     String   @unique
   password  String
   role      Role     @default(USER)
@@ -41,10 +40,20 @@ model User {
   addresses Address[]
   products  Product[]
   orders    Order[]
+  cart          Cart?
+  refreshTokens RefreshToken[]
 
   // index
   // @@index([email])  // not needed because @unique already creates an index
-  cart Cart?
+}
+
+model RefreshToken {
+  id        String   @default(uuid())
+  token     String   @unique
+  userId    String
+  expiredAt DateTime
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model Address {
@@ -163,4 +172,3 @@ model CartItem {
 
   @@unique([cartId, productId]) // the combination of cartId and productId must be unique.
 }
-
