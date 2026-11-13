@@ -94,10 +94,10 @@ model Product {
   categoryId         String
   productName        String
   productDescription String
-  productImageUrl    String[]
+  productImageUrls    String[]
   productPrice       Decimal  @db.Decimal(10, 2)
   stock              Int
-  rating             Decimal  @db.Decimal(2, 1)
+  rating             Decimal  @db.Decimal(2, 1) @default(0)
   isActive           Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

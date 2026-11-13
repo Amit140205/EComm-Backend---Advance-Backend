@@ -31,3 +31,13 @@ export const verifySeller = (req: Request, res: Response, next: NextFunction) =>
 
     next();
 };
+
+export const verifyAdmin = (req: Request, res: Response, next: NextFunction) => {
+    const user = req.user;
+
+    if (user?.role !== "ADMIN") {
+        throw new AppError(403, "You are not authorized");
+    }
+
+    next();
+};
