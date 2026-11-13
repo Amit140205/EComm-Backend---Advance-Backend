@@ -17,7 +17,7 @@ export const setCookies = (res: Response, accessToken: string, refreshToken: str
     });
 };
 
-export const destroyCookies = (res: Response) => {
+export const clearCookies = (res: Response) => {
     res.clearCookie("accessToken", {
         httpOnly: true,
         secure: NODE_ENV === "production",

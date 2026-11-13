@@ -1,11 +1,27 @@
 import express from "express";
 import { validate } from "../../middlewares/validate.middleware.js";
-import { loginUserSchema, registerUserSchema } from "./auth.schema.js";
-import { loginUserController, registerUserController } from "./auth.controller.js";
+import { loginUserSchema, logoutUserSchema, refreshTokenSchema, registerUserSchema } from "./auth.schema.js";
+import { getCurrentUserController, loginUserController, logoutAllController, logoutController, refreshTokenController, registerUserController } from "./auth.controller.js";
+import { verifyUser } from "../../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-router.route("/register").post(validate(registerUserSchema), registerUserController);
-router.route("/login").post(validate(loginUserSchema), loginUserController);
+router.route("/register")
+    .post(validate(registerUserSchema), registerUserController);
+
+router.route("/login")
+    .post(validate(loginUserSchema), loginUserController);
+
+router.route("/me")
+    .get(verifyUser, getCurrentUserController);
+
+router.route("/logout")
+    .post(verifyUser, validate(logoutUserSchema), logoutController);
+
+router.route("/logout-all")
+    .post(verifyUser, logoutAllController);
+
+router.route("/refreshToken")
+    .post(validate(refreshTokenSchema), refreshTokenController);
 
 export default router;

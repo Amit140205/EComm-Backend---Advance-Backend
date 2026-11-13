@@ -29,12 +29,48 @@ export class AuthRepository implements IAuthRepository {
         return user;
     }
 
+    async findUserById(id: string): Promise<User | null> {
+        const user = await prisma.user.findUnique({
+            where: {
+                id
+            }
+        });
+
+        return user;
+    }
+
     // Refresh Token
-    async createRefreshToken(data: {token: string, userId: string, expiredAt: Date}): Promise<RefreshToken> {
+    async createRefreshToken(data: { token: string, userId: string, expiredAt: Date; }): Promise<RefreshToken> {
         const refreshToken = await prisma.refreshToken.create({
             data
         });
 
         return refreshToken;
+    }
+
+    async findRefreshToken(token: string): Promise<RefreshToken | null> {
+        const refreshToken = await prisma.refreshToken.findUnique({
+            where: {
+                token
+            }
+        });
+
+        return refreshToken;
+    }
+
+    async deleteRefreshTokenById(id: string): Promise<void> {
+        await prisma.refreshToken.delete({
+            where: {
+                id
+            }
+        });
+    }
+
+    async deleteRefreshTokenByUserId(userId: string): Promise<void> {
+        await prisma.refreshToken.deleteMany({
+            where: {
+                userId
+            }
+        });
     }
 }
