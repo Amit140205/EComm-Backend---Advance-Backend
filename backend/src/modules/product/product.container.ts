@@ -1,4 +1,4 @@
-import { CloudinaryService } from "../services/file/cloudinary.service.js";
+import { CloudinaryService } from "../../services/file/cloudinary.service.js";
 import { ProductRepository } from "./product.repository.js";
 import { ProductService } from "./product.service.js";
 

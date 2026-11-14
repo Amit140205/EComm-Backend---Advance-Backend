@@ -3,8 +3,9 @@ export type ProductResponseDTO = {
     productName: string,
     productDescription: string,
     productImageUrls: string[],
-    productPrice: any,
-    stock: number,
+    productPrice: string,
+    stock: string,
+    isActive: boolean
     createdAt: Date,
     updatedAt: Date
 }

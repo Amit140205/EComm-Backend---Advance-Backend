@@ -14,7 +14,9 @@ export const createCategoryController = catchAsync(async (req: Request, res: Res
 });
 
 export const getAllCategoriesController = catchAsync(async (req: Request, res: Response) => {
-    const result = await categoryService.getAllCategories();
+    const { limit, cursor } = req.query;
+    const parsedLimit = limit ? parseInt(limit as string) : 10;
+    const result = await categoryService.getAllCategories(parsedLimit, cursor as string);
 
     sendResponse(res, 200, {
         success: true,

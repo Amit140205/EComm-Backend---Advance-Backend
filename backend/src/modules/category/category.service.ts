@@ -25,10 +25,10 @@ export class CategoryService {
         };
     }
 
-    async getAllCategories(): Promise<{
+    async getAllCategories(limit: number, cursor?: string): Promise<{
         categories: CategoryResponseDTO[];
     }> {
-        const categories = await this.categoryRepo.getAllCategories();
+        const categories = await this.categoryRepo.getAllCategories(limit, cursor);
         return {
             categories: toCategoryListResponse(categories)
         };
@@ -57,7 +57,8 @@ export class CategoryService {
             throw new AppError(404, "Category not found");
         }
 
-        const products = await this.productRepo.getProductsByCategoryId(id);
+        const products = await this.productRepo.getProductsByCategoryId(id, 1);
+        // even if it returns atleast one product, we can not delete the category
 
         if (products.length > 0) {
             throw new AppError(400, "Category that contains products can not be deleted");

@@ -10,12 +10,17 @@ export interface IAuthRepository {
         phoneNo: string;
         role?: Role;
     }): Promise<User>;
+
     findUserByEmail(email: string): Promise<User | null>;
+    
     findUserById(id: string): Promise<User | null>;
 
     // Refresh Token
     createRefreshToken(date: { token: string; userId: string; expiredAt: Date; }): Promise<RefreshToken>;
+
     findRefreshToken(token: string): Promise<RefreshToken | null>;
+
     deleteRefreshTokenById(id: string): Promise<void>;
+    
     deleteRefreshTokenByUserId(userId: string): Promise<void>;
 }

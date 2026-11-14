@@ -7,8 +7,9 @@ export const toProductResponse = (product: Product): ProductResponseDTO => {
         productName: product.productName,
         productDescription: product.productDescription,
         productImageUrls: product.productImageUrls,
-        productPrice: product.productPrice,
-        stock: product.stock,
+        productPrice: product.productPrice.toString(),
+        stock: product.stock.toString(),
+        isActive: product.isActive,
         createdAt: product.createdAt,
         updatedAt: product.updatedAt
     }

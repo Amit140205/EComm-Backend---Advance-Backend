@@ -1,4 +1,4 @@
-import { deleteFromCloudinary, uploadToCloudinary } from "../../../utils/cloudinary.helper.js";
+import { deleteFromCloudinary, uploadToCloudinary } from "../../utils/cloudinary.helper.js";
 import { IFileService } from "./file.interface.js";
 
 export class CloudinaryService implements IFileService {

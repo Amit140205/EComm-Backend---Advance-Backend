@@ -32,8 +32,15 @@ export class CategoryRepository implements ICategoryRepository {
         return category;
     }
 
-    async getAllCategories(): Promise<Category[]> {
-        const categories = await prisma.category.findMany();
+    async getAllCategories(limit: number, cursor?: string): Promise<Category[]> {
+        const categories = await prisma.category.findMany({
+            take: limit,
+            skip: cursor ? 1 : 0,
+            cursor: cursor ? { id: cursor } : undefined,
+            orderBy: {
+                createdAt: "desc"
+            }
+        });
 
         return categories;
     }
