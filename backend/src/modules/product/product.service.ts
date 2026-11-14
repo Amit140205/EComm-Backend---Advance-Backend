@@ -1,8 +1,8 @@
-import { Prisma } from "../../../generated/prisma/index.js";
+import { Prisma, Product } from "../../../generated/prisma/index.js";
 import { AppError } from "../../utils/app.error.js";
 import { IFileService } from "../services/file/file.interface.js";
 import { IProductRepository } from "./product.interface.js";
-import { toProductResponse } from "./product.mapper.js";
+import { toProductListResponse, toProductResponse } from "./product.mapper.js";
 import { ProductResponseDTO } from "./product.response.js";
 import { CreateProductDTO } from "./product.schema.js";
 
@@ -10,7 +10,7 @@ export class ProductService {
     constructor(private productRepo: IProductRepository, private fileService: IFileService) { };
 
     async createProduct(data: CreateProductDTO, userId: string, files: Express.Multer.File[]): Promise<{
-        product: ProductResponseDTO
+        product: ProductResponseDTO;
     }> {
         if (!files || files.length === 0) {
             throw new AppError(400, "Atleast one product image is required");
@@ -32,6 +32,16 @@ export class ProductService {
 
         return {
             product: toProductResponse(newProduct)
+        };
+    }
+
+    async getProductsByCategoryId(categoryId: string): Promise<{
+        products: ProductResponseDTO[]
+    }> {
+        const products = await this.productRepo.getProductsByCategoryId(categoryId);
+
+        return {
+            products: toProductListResponse(products)
         };
     }
 }

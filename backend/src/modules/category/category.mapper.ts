@@ -6,6 +6,11 @@ export const toCategoryResponse = (category: Category): CategoryResponseDTO => {
         id: category.id,
         categoryName: category.categoryName,
         categoryDescription: category.categoryDescription,
-        createdAt: category.createdAt
+        createdAt: category.createdAt,
+        updatedAt: category.updatedAt
     };
 };
+
+export const toCategoryListResponse = (categories: Category[]): CategoryResponseDTO[] => {
+    return categories.map((category: Category) => toCategoryResponse(category));
+}

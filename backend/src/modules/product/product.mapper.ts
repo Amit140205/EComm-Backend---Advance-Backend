@@ -12,4 +12,8 @@ export const toProductResponse = (product: Product): ProductResponseDTO => {
         createdAt: product.createdAt,
         updatedAt: product.updatedAt
     }
+};
+
+export const toProductListResponse = (products: Product[]): ProductResponseDTO[] => {
+    return products.map((product: Product) => toProductResponse(product));
 }

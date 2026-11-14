@@ -1,5 +1,6 @@
+import { productRepository } from "../product/product.container.js";
 import { CategoryRepository } from "./category.repository.js";
 import { CategoryService } from "./category.service.js";
 
 const categoryRepository = new CategoryRepository();
-export const categoryService = new CategoryService(categoryRepository);
+export const categoryService = new CategoryService(categoryRepository, productRepository);

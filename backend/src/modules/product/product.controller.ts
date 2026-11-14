@@ -13,3 +13,14 @@ export const createProductController = catchAsync(async (req: Request, res: Resp
         data: result
     });
 });
+
+export const getProductsByCategoryIdController = catchAsync(async (req: Request, res: Response) => {
+    const { categoryId } = req.params;
+    const result = await productService.getProductsByCategoryId(categoryId as string);
+
+    sendResponse(res, 200, {
+        success: true,
+        message: "Products fetched successfully",
+        data: result
+    })
+});
