@@ -25,6 +25,12 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum AddressType {
+  HOME
+  WORK
+  OTHER
+}
+
 model User {
   id        String   @id @default(uuid())
   firstName String
@@ -37,9 +43,9 @@ model User {
   updatedAt DateTime @updatedAt
 
   // relation
-  addresses Address[]
-  products  Product[]
-  orders    Order[]
+  addresses     Address[]
+  products      Product[]
+  orders        Order[]
   cart          Cart?
   refreshTokens RefreshToken[]
 
@@ -57,16 +63,17 @@ model RefreshToken {
 }
 
 model Address {
-  id           String   @id @default(uuid())
+  id           String      @id @default(uuid())
   userId       String
+  addressType  AddressType @default(HOME)
   addressLine1 String
   addressLine2 String?
   city         String
   state        String
   country      String
   pincode      String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   // relation
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -95,10 +102,10 @@ model Product {
   categoryId         String
   productName        String
   productDescription String
-  productImageUrls    String[]
+  productImageUrls   String[]
   productPrice       Decimal  @db.Decimal(10, 2)
   stock              Int
-  rating             Decimal  @db.Decimal(2, 1) @default(0)
+  rating             Decimal  @default(0) @db.Decimal(2, 1)
   isActive           Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -124,8 +131,9 @@ model Order {
   updatedAt  DateTime    @updatedAt
 
   // relation
-  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items OrderItem[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items        OrderItem[]
+  orderAddress OrderAddress?
 
   // index
   @@index([userId])
@@ -146,6 +154,19 @@ model OrderItem {
   // index
   @@index([orderId])
   @@index([productId])
+}
+
+model OrderAddress {
+  id           String  @id @default(uuid())
+  orderId      String  @unique
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String
+  country      String
+
+  // relation
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model Cart {

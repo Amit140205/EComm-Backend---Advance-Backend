@@ -8,7 +8,7 @@ import { CreateOrderDTO } from "./order.schema.js";
 export class OrderRepository implements IOrderRepository {
     async placeOrder(userId: string, data: CreateOrderDTO): Promise<Order> {
         return await prisma.$transaction(async (tx) => {
-            const { items } = data;
+            const { items, addressId } = data;
 
             // Problem: Duplicate productIds in the request, create two order items for the same product. 
             // Merge them first
@@ -75,6 +75,18 @@ export class OrderRepository implements IOrderRepository {
                 });
             }
 
+            // fetch address snap
+            const address = await tx.address.findUnique({
+                where: {
+                    id: data.addressId,
+                    userId
+                }
+            });
+
+            if (!address) {
+                throw new AppError(400, "Invalid address");
+            }
+
             const newOrder = await tx.order.create({
                 data: {
                     userId,
@@ -83,10 +95,20 @@ export class OrderRepository implements IOrderRepository {
                     status: OrderStatus.PENDING,
                     items: {
                         create: orderItemsData // automatically creates orderItems under this order id
+                    },
+                    orderAddress: {
+                        create: {
+                            addressLine1: address.addressLine1,
+                            addressLine2: address.addressLine2,
+                            city: address.city,
+                            state: address.state,
+                            country: address.country
+                        }
                     }
                 },
                 include: {
-                    items: true
+                    items: true,
+                    orderAddress: true
                 }
             });
 
@@ -152,7 +174,7 @@ export class OrderRepository implements IOrderRepository {
             });
 
             if (!order) {
-                throw new AppError(400, "Product not found or you are not authorized to perform this action");
+                throw new AppError(401, "Product not found or you are not authorized to perform this action");
             }
 
             if (order.status !== OrderStatus.PENDING) {

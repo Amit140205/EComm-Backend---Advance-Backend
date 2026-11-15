@@ -61,7 +61,7 @@ export class ProductService {
         const existingProduct = await this.productRepo.getProductByIdAndSellerId(id, sellerId);
 
         if (!existingProduct) {
-            throw new AppError(404, "Product not found or you are not authorized to perform this action");
+            throw new AppError(401, "Product not found or you are not authorized to perform this action");
         }
 
         const { productName, productDescription, productPrice, stock } = data;
