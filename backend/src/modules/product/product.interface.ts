@@ -34,4 +34,6 @@ export interface IProductRepository {
     toggleIsActive(id: string, sellerId: string, isActive: boolean): Promise<Product>;
 
     getAllActiveProducts(limit: number, cursor?: string): Promise<Product[]>;
+
+    getProductById(id: string): Promise<Product | null>;
 }
