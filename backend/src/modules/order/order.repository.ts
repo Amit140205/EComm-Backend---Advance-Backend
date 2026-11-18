@@ -10,33 +10,92 @@ export class OrderRepository implements IOrderRepository {
         return await prisma.$transaction(async (tx) => {
             const { items, addressId } = data;
 
-            // Problem: Duplicate productIds in the request, create two order items for the same product. 
-            // Merge them first
-            const merged = new Map<string, number>();
+            // Problem
 
-            for (const { productId, quantity } of items) {
-                const existingQuantity = merged.get(productId) ?? 0;
-                merged.set(productId, existingQuantity + quantity);
+            // here Race Condition occurs
+            // Transaction 1: quantity = 1 | Transaction 2: quantity = 1 (both request at the same time, validation passed)
+            // product stock become(actual stock = 1) = -1 (Lost Update Problem)
+            // read -> validate -> update (problem)
+            // soln: Do all of this stuff in a single query
+
+            // this looping causes => N+1 Query Problem
+            // 1 query per product | 1 update per product
+            // but the logic should be fetch the all the products before the loop
+
+            // After improvement
+            // 1. Transactional safety
+            // 2. Atomic db operation
+            // 3. Concurrency handling
+            // 4. Scalable stock handling 
+
+            // first step
+            // fetch address snap
+            const address = await tx.address.findUnique({
+                where: {
+                    id: addressId,
+                    userId
+                }
+            });
+
+            if (!address) {
+                throw new AppError(400, "Invalid address");
             }
-
-            const uniqueItems = [...merged].map(([productId, quantity]) => ({ productId, quantity }));
 
             let totalPrice = new Prisma.Decimal(0);
             let totalItems = 0;
-
-            const orderItemsData: {
-                productId: string;
-                quantity: number;
+            let orderItemsData: {
+                productId: string,
+                quantity: number,
                 priceAtPurchase: Prisma.Decimal;
             }[] = [];
 
-            for (const item of uniqueItems) {
-                // check each product available or not
-                const product = await tx.product.findUnique({
-                    where: {
-                        id: item.productId
+            // then product
+            const productIds = items.map((item) => item.productId);
+            const products = await tx.product.findMany({
+                where: {
+                    id: {
+                        in: productIds
                     }
-                });
+                }
+            });
+
+            const productMap = new Map(
+                products.map((product) => [product.id, product])
+            );
+
+            for (const item of items) {
+                // // check each product available or not
+                // const product = await tx.product.findUnique({
+                //     where: {
+                //         id: item.productId
+                //     }
+                // });
+
+                // if (!product) {
+                //     throw new AppError(404, "Product not found");
+                // }
+
+                // if (!product.isActive) {
+                //     throw new AppError(400, `${product.productName} is not available`);
+                // }
+
+                // if (product.stock < item.quantity) {
+                //     throw new AppError(400, `Insufficient stock for ${product.productName}`);
+                // }
+
+                // // update the product stock
+                // await tx.product.update({
+                //     data: {
+                //         stock: {
+                //             decrement: item.quantity
+                //         }
+                //     },
+                //     where: {
+                //         id: product.id
+                //     }
+                // });
+
+                const product = productMap.get(item.productId);
 
                 if (!product) {
                     throw new AppError(404, "Product not found");
@@ -46,21 +105,25 @@ export class OrderRepository implements IOrderRepository {
                     throw new AppError(400, `${product.productName} is not available`);
                 }
 
-                if (product.stock < item.quantity) {
-                    throw new AppError(400, `Insufficient stock for ${product.productName}`);
-                }
-
-                // update the product stock
-                await tx.product.update({
+                // single query
+                const updatedProduct = await tx.product.updateMany({
+                    where: {
+                        id: item.productId,
+                        stock: {
+                            gte: item.quantity
+                        },
+                        isActive: true
+                    },
                     data: {
                         stock: {
                             decrement: item.quantity
                         }
-                    },
-                    where: {
-                        id: product.id
                     }
                 });
+
+                if (!updatedProduct.count) {
+                    throw new AppError(400, "Insufficient stock");
+                }
 
                 // total item price = item price * quantity
                 const totalItemPrice = product.productPrice.mul(item.quantity);
@@ -75,17 +138,6 @@ export class OrderRepository implements IOrderRepository {
                 });
             }
 
-            // fetch address snap
-            const address = await tx.address.findUnique({
-                where: {
-                    id: data.addressId,
-                    userId
-                }
-            });
-
-            if (!address) {
-                throw new AppError(400, "Invalid address");
-            }
 
             const newOrder = await tx.order.create({
                 data: {
@@ -135,7 +187,12 @@ export class OrderRepository implements IOrderRepository {
                 userId
             },
             include: {
-                items: true
+                items: {
+                    include: {
+                        product: true
+                    }
+                },
+                orderAddress: true
             },
             take: limit,
             skip: cursor ? 1 : 0,

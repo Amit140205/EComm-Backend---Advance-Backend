@@ -1,5 +1,6 @@
 import { Prisma, Product } from "../../../generated/prisma/index.js";
 import { prisma } from "../../lib/prisma.js";
+import { ProductQueryOptions } from "../../types/index.js";
 import { IProductRepository } from "./product.interface.js";
 import { UpdateProductDTO } from "./product.schema.js";
 
@@ -104,17 +105,62 @@ export class ProductRepository implements IProductRepository {
         return updatedProduct;
     }
 
-    async getAllActiveProducts(limit: number, cursor?: string): Promise<Product[]> {
+    async getAllActiveProducts(filters: ProductQueryOptions): Promise<Product[]> {
+        const { limit, cursor, categoryId, minPrice, maxPrice, sortBy } = filters;
+
+        const parsedLimit = limit ? parseInt(limit as string) : 5;
+
+        const where: Prisma.ProductWhereInput = {
+            isActive: true
+        };
+
+        // filter by category
+        if (categoryId) {
+            where.categoryId = categoryId;
+        }
+
+        // filter by price
+        if (minPrice || maxPrice) {
+            where.productPrice = {};
+
+            if (minPrice) {
+                where.productPrice.gte = new Prisma.Decimal(minPrice);
+            }
+
+            if (maxPrice) {
+                where.productPrice.lte = new Prisma.Decimal(maxPrice);
+            }
+        }
+
+        // sort
+        let orderBy: Prisma.ProductOrderByWithRelationInput = {
+            createdAt: "desc"
+        };
+
+        switch (sortBy) {
+            case "latest":
+                orderBy = { createdAt: "desc" };
+                break;
+
+            case "oldest":
+                orderBy = { createdAt: "asc" };
+                break;
+            
+            case "priceAsc":
+                orderBy = { productPrice: "asc" };
+                break;
+            
+            case "priceDesc":
+                orderBy = { productPrice: "desc" };
+                break;
+        }
+
         const activeProducts = await prisma.product.findMany({
-            where: {
-                isActive: true
-            },
-            take: limit,
+            where,
+            take: parsedLimit,
             skip: cursor ? 1 : 0,
             cursor: cursor ? { id: cursor } : undefined,
-            orderBy: {
-                createdAt: "desc"
-            }
+            orderBy
         });
 
         return activeProducts;

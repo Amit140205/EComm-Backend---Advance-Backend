@@ -80,10 +80,8 @@ export const toggleIsActiveController = catchAsync(async (req: Request, res: Res
 });
 
 export const getAllActiveProductsController = catchAsync(async (req: Request, res: Response) => {
-    const { limit, cursor } = req.query;
-    const parsedLimit = limit ? parseInt(limit as string) : 5;
 
-    const result = await productService.getAllActiveProducts(parsedLimit, cursor as string);
+    const result = await productService.getAllActiveProducts(req.query);
 
     sendResponse(res, 200, {
         success: true,

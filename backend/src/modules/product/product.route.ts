@@ -33,6 +33,9 @@ router.route("/delete-product/:id")
 router.route("/toggle-is-active/:id")
     .patch(verifyUser, verifySeller, toggleIsActiveController);
 
+// implementing filtering & sorting
+// filtering => categoryId, minPrice, maxPrice  
+// sorting =>  latest, priceAsc, priceDesc
 router.route("/all-active-products")
     .get(getAllActiveProductsController);
 

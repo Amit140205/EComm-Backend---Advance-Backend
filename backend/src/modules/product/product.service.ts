@@ -1,5 +1,6 @@
 import { Prisma, Product } from "../../../generated/prisma/index.js";
 import { IFileService } from "../../services/file/file.interface.js";
+import { ProductQueryOptions } from "../../types/index.js";
 import { AppError } from "../../utils/app.error.js";
 import { IProductRepository } from "./product.interface.js";
 import { toProductListResponse, toProductResponse } from "./product.mapper.js";
@@ -114,8 +115,9 @@ export class ProductService {
         };
     }
 
-    async getAllActiveProducts(limit: number, cursor?: string) {
-        const activeProducts = await this.productRepo.getAllActiveProducts(limit, cursor);
+    async getAllActiveProducts(filters: ProductQueryOptions) {
+
+        const activeProducts = await this.productRepo.getAllActiveProducts(filters);
 
         return {
             products: toProductListResponse(activeProducts)
