@@ -1,7 +1,9 @@
 import { Prisma, Product } from "../../../generated/prisma/index.js";
+import { redis } from "../../lib/redis.js";
 import { IFileService } from "../../services/file/file.interface.js";
-import { ProductQueryOptions } from "../../types/index.js";
+import { ProductCursor, ProductQueryOptions } from "../../types/index.js";
 import { AppError } from "../../utils/app.error.js";
+import { invalidateProductCache } from "../../utils/cache.helper.js";
 import { IProductRepository } from "./product.interface.js";
 import { toProductListResponse, toProductResponse } from "./product.mapper.js";
 import { ProductResponseDTO } from "./product.response.js";
@@ -30,6 +32,8 @@ export class ProductService {
             productPrice: new Prisma.Decimal(data.productPrice),
             stock: Number(data.stock)
         });
+
+        await invalidateProductCache();
 
         return {
             product: toProductResponse(newProduct)
@@ -78,6 +82,8 @@ export class ProductService {
             sellerId
         );
 
+        await invalidateProductCache();
+
         return {
             product: toProductResponse(updatedProduct)
         };
@@ -97,6 +103,8 @@ export class ProductService {
         );
 
         await this.productRepo.deleteProductByIdAndSellerId(id, sellerId);
+
+        await invalidateProductCache();
     }
 
     async toggleIsActive(id: string, sellerId: string): Promise<{
@@ -110,17 +118,56 @@ export class ProductService {
 
         const updatedProduct = await this.productRepo.toggleIsActive(id, sellerId, existingProduct.isActive);
 
+        await invalidateProductCache();
+
         return {
             product: toProductResponse(updatedProduct)
         };
     }
 
-    async getAllActiveProducts(filters: ProductQueryOptions) {
+    async getAllActiveProducts(filters: ProductQueryOptions): Promise<{
+        products: ProductResponseDTO[],
+        nextCursor: ProductCursor | null,
+        hasNext: boolean;
+    }> {
 
-        const activeProducts = await this.productRepo.getAllActiveProducts(filters);
+        // caching logic
 
-        return {
-            products: toProductListResponse(activeProducts)
+        // normalizing filters
+        // without this, Redis treat the given example as two different keys
+        // example: products:{"sortBy":"priceAsc","limit":"5"} | products:{"limit":"5","sortBy":"priceAsc"} 
+        // Problem: Duplicate keys for same value
+        const entries = Object.entries(filters);
+        entries.sort(([a], [b]) => a.localeCompare(b));
+        const normalizedFilters = Object.fromEntries(entries);
+
+        const cacheKey = `products:${JSON.stringify(normalizedFilters)}`;
+        // example = products:{"sortBy":"priceAsc","limit":"5","cursor":{"value":"1200","id":"abc"}}
+
+        const cachedProducts = await redis.get(cacheKey);
+
+        if (cachedProducts) {
+            console.log("Cache HIT");
+            return JSON.parse(cachedProducts);
+        }
+
+        console.log("Cache MISS");
+
+        const { products, nextCursor, hasNext } = await this.productRepo.getAllActiveProducts(normalizedFilters);
+
+        const formattedResult = {
+            products: toProductListResponse(products),
+            nextCursor,
+            hasNext
         };
+
+        await redis.set(
+            cacheKey,
+            JSON.stringify(formattedResult),
+            "EX",
+            300
+        );
+
+        return formattedResult;
     }
 }

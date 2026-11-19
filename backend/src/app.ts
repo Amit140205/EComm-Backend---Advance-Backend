@@ -13,6 +13,7 @@ app.use(cors({
     credentials: true
 }));
 app.use(cookieParser());
+app.set("query parser", "extended");
 
 app.get("/health-check", (req: Request, res: Response) => {
     res.status(200).json({

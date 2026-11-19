@@ -1,5 +1,5 @@
 import { Prisma, Product } from "../../../generated/prisma/index.js";
-import { ProductQueryOptions } from "../../types/index.js";
+import { ProductCursor, ProductQueryOptions } from "../../types/index.js";
 import { UpdateProductDTO } from "./product.schema.js";
 
 export interface IProductRepository {
@@ -34,7 +34,11 @@ export interface IProductRepository {
 
     toggleIsActive(id: string, sellerId: string, isActive: boolean): Promise<Product>;
 
-    getAllActiveProducts(filters: ProductQueryOptions): Promise<Product[]>;
+    getAllActiveProducts(filters: ProductQueryOptions): Promise<{
+        products: Product[];
+        nextCursor: ProductCursor | null;
+        hasNext: boolean;
+    }>;
 
     getProductById(id: string): Promise<Product | null>;
 }

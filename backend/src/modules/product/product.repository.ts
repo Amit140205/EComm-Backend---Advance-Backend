@@ -1,6 +1,6 @@
 import { Prisma, Product } from "../../../generated/prisma/index.js";
 import { prisma } from "../../lib/prisma.js";
-import { ProductQueryOptions } from "../../types/index.js";
+import { ProductCursor, ProductQueryOptions } from "../../types/index.js";
 import { IProductRepository } from "./product.interface.js";
 import { UpdateProductDTO } from "./product.schema.js";
 
@@ -105,7 +105,13 @@ export class ProductRepository implements IProductRepository {
         return updatedProduct;
     }
 
-    async getAllActiveProducts(filters: ProductQueryOptions): Promise<Product[]> {
+    async getAllActiveProducts(filters: ProductQueryOptions): Promise<{
+        products: Product[];
+        nextCursor: ProductCursor | null;
+        hasNext: boolean;
+    }> {
+        // changing the pagination approach from "Record-Based Cursor Pagination" => "Value-Based Keyset Pagination"
+
         const { limit, cursor, categoryId, minPrice, maxPrice, sortBy } = filters;
 
         const parsedLimit = limit ? parseInt(limit as string) : 5;
@@ -133,37 +139,117 @@ export class ProductRepository implements IProductRepository {
         }
 
         // sort
-        let orderBy: Prisma.ProductOrderByWithRelationInput = {
-            createdAt: "desc"
-        };
+        // both createdAt or productPrice and id
+        // default for "latest"
+        let orderBy: Prisma.ProductOrderByWithRelationInput[] = [
+            // for latest
+            { createdAt: "desc" },
+            { id: "desc" }
+        ];
 
         switch (sortBy) {
             case "latest":
-                orderBy = { createdAt: "desc" };
+                orderBy = [
+                    { createdAt: "desc" },
+                    { id: "desc" }
+                ];
                 break;
 
             case "oldest":
-                orderBy = { createdAt: "asc" };
+                orderBy = [
+                    { createdAt: "asc" },
+                    { id: "asc" }
+                ];
                 break;
-            
+
             case "priceAsc":
-                orderBy = { productPrice: "asc" };
+                orderBy = [
+                    { productPrice: "asc" },
+                    { id: "asc" }
+                ];
                 break;
-            
+
             case "priceDesc":
-                orderBy = { productPrice: "desc" };
+                orderBy = [
+                    { productPrice: "desc" },
+                    { id: "desc" }
+                ];
                 break;
+        }
+
+        // cursor => value based keyset pagination
+        // previous simple approach does not work for priceAsc and priceDesc filters for that I need to include id
+        // if (cursor) {
+        //     where.createdAt = {
+        //         lt: new Date(cursor)
+        //     };
+        // }
+
+        if (cursor) {
+            if (sortBy === "latest") {
+                where.OR = [
+                    { createdAt: { lt: new Date(cursor.value) } },
+                    {
+                        createdAt: new Date(cursor.value),
+                        id: { lt: cursor.id }
+                    }
+                ];
+            } else if (sortBy === "oldest") {
+                where.OR = [
+                    { createdAt: { gt: new Date(cursor.value) } },
+                    {
+                        createdAt: new Date(cursor.value),
+                        id: { gt: cursor.id }
+                    }
+                ];
+            } else if (sortBy === "priceAsc") {
+                where.OR = [
+                    { productPrice: { gt: new Prisma.Decimal(cursor.value) } },
+                    {
+                        productPrice: new Prisma.Decimal(cursor.value),
+                        id: { gt: cursor.id }
+                    }
+                ];
+            } else if (sortBy === "priceDesc") {
+                where.OR = [
+                    { productPrice: { lt: new Prisma.Decimal(cursor.value) } },
+                    {
+                        productPrice: new Prisma.Decimal(cursor.value),
+                        id: { lt: cursor.id }
+                    }
+                ];
+            }
         }
 
         const activeProducts = await prisma.product.findMany({
             where,
-            take: parsedLimit,
-            skip: cursor ? 1 : 0,
-            cursor: cursor ? { id: cursor } : undefined,
+            take: parsedLimit + 1,
+            // skip: cursor ? 1 : 0,
+            // cursor: cursor ? { id: cursor } : undefined,
             orderBy
         });
 
-        return activeProducts;
+        const hasNext = activeProducts.length > parsedLimit;
+
+        if (hasNext) {
+            activeProducts.pop();
+        }
+
+        const lastProduct = activeProducts[activeProducts.length - 1];
+        let nextCursor: ProductCursor | null = null;
+
+        if (hasNext && lastProduct) {
+            nextCursor = {
+                value: sortBy === "priceAsc" || sortBy === "priceDesc" ? lastProduct.productPrice.toString() : lastProduct.createdAt.toISOString(),
+                id: lastProduct.id
+            };
+        }
+
+        return {
+            products: activeProducts,
+            nextCursor,
+            hasNext
+        };
     }
 
     async getProductById(id: string): Promise<Product | null> {

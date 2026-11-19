@@ -1,5 +1,8 @@
 import { Category } from "../../../generated/prisma/index.js";
+import { redis } from "../../lib/redis.js";
+import { CategoryQueryOptions } from "../../types/index.js";
 import { AppError } from "../../utils/app.error.js";
+import { invalidateCategoryCache } from "../../utils/cache.helper.js";
 import { IProductRepository } from "../product/product.interface.js";
 import { ICategoryRepository } from "./category.interface.js";
 import { toCategoryListResponse, toCategoryResponse } from "./category.mapper.js";
@@ -18,19 +21,46 @@ export class CategoryService {
             throw new AppError(400, "Category with this name already exists");
         }
 
-        const category = await this.categoryRepo.createCategory(data);
+        const newCategory = await this.categoryRepo.createCategory(data);
+
+        await invalidateCategoryCache();
 
         return {
-            category: toCategoryResponse(category)
+            category: toCategoryResponse(newCategory)
         };
     }
 
-    async getAllCategories(limit: number, cursor?: string): Promise<{
+    async getAllCategories(filters: CategoryQueryOptions): Promise<{
         categories: CategoryResponseDTO[];
     }> {
-        const categories = await this.categoryRepo.getAllCategories(limit, cursor);
+
+        // implementing caching
+        const entries = Object.entries(filters);
+        entries.sort(([a], [b]) => a.localeCompare(b));
+        const normalizedFilters = Object.fromEntries(entries);
+
+        const cacheKey = `categories:${JSON.stringify(normalizedFilters)}`;
+
+        const cachedCategories = await redis.get(cacheKey);
+
+        if (cachedCategories) {
+            console.log("Cache HIT");
+            return JSON.parse(cachedCategories);
+        }
+
+        console.log("Cache MISS");
+
+        const categories = await this.categoryRepo.getAllCategories(normalizedFilters);
+        const formattedResult = toCategoryListResponse(categories);
+
+        await redis.set(
+            cacheKey,
+            JSON.stringify(formattedResult),
+            "EX",
+            300
+        );
         return {
-            categories: toCategoryListResponse(categories)
+            categories: formattedResult
         };
     }
 
@@ -44,6 +74,8 @@ export class CategoryService {
         }
 
         const updatedCategory = await this.categoryRepo.updateCategory(id, data);
+
+        await invalidateCategoryCache();
 
         return {
             category: toCategoryResponse(updatedCategory)
@@ -65,5 +97,7 @@ export class CategoryService {
         }
 
         await this.categoryRepo.deleteCategoryById(id);
+
+        await invalidateCategoryCache();
     }
 }

@@ -1,4 +1,5 @@
 import { Category } from "../../../generated/prisma/index.js";
+import { CategoryQueryOptions } from "../../types/index.js";
 import { CreateCategoryDTO, UpdateCategoryDTO } from "./category.schema.js";
 
 export interface ICategoryRepository {
@@ -8,7 +9,7 @@ export interface ICategoryRepository {
 
     findCategoryById(id: string): Promise<Category | null>;
 
-    getAllCategories(limit: number, cursor?: string): Promise<Category[]>;
+    getAllCategories(filters: CategoryQueryOptions): Promise<Category[]>;
 
     updateCategory(id: string, data: UpdateCategoryDTO): Promise<Category>; 
     

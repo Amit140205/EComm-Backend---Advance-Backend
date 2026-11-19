@@ -1,5 +1,6 @@
 import { Category } from "../../../generated/prisma/index.js";
 import { prisma } from "../../lib/prisma.js";
+import { CategoryQueryOptions } from "../../types/index.js";
 import { ICategoryRepository } from "./category.interface.js";
 import { CreateCategoryDTO, UpdateCategoryDTO } from "./category.schema.js";
 
@@ -32,9 +33,12 @@ export class CategoryRepository implements ICategoryRepository {
         return category;
     }
 
-    async getAllCategories(limit: number, cursor?: string): Promise<Category[]> {
+    async getAllCategories(filters: CategoryQueryOptions): Promise<Category[]> {
+        const { limit, cursor } = filters;
+        const parsedLimit = limit ? parseInt(limit as string) : 10;
+
         const categories = await prisma.category.findMany({
-            take: limit,
+            take: parsedLimit,
             skip: cursor ? 1 : 0,
             cursor: cursor ? { id: cursor } : undefined,
             orderBy: {
