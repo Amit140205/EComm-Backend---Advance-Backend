@@ -3,14 +3,15 @@ import { validate } from "../../middlewares/validate.middleware.js";
 import { loginUserSchema, logoutUserSchema, refreshTokenSchema, registerUserSchema } from "./auth.schema.js";
 import { getCurrentUserController, loginUserController, logoutAllController, logoutController, refreshTokenController, registerUserController } from "./auth.controller.js";
 import { verifyUser } from "../../middlewares/auth.middleware.js";
+import { authLimiter } from "../../middlewares/rateLimit.middleware.js";
 
 const router = express.Router();
 
 router.route("/register")
-    .post(validate(registerUserSchema), registerUserController);
+    .post(authLimiter, validate(registerUserSchema), registerUserController);
 
 router.route("/login")
-    .post(validate(loginUserSchema), loginUserController);
+    .post(authLimiter, validate(loginUserSchema), loginUserController);
 
 router.route("/me")
     .get(verifyUser, getCurrentUserController);
@@ -22,6 +23,6 @@ router.route("/logout-all")
     .post(verifyUser, logoutAllController);
 
 router.route("/refreshToken")
-    .post(validate(refreshTokenSchema), refreshTokenController);
+    .post(authLimiter, validate(refreshTokenSchema), refreshTokenController);
 
 export default router;

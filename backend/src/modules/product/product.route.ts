@@ -12,26 +12,27 @@ import {
 } from "./product.controller.js";
 import { validate } from "../../middlewares/validate.middleware.js";
 import { upload } from "../../middlewares/multer.middleware.js";
+import { productLimiter, userLimiter } from "../../middlewares/rateLimit.middleware.js";
 
 const router = express.Router();
 
 router.route("/create-product")
-    .post(verifyUser, verifySeller, upload.array("images", 5), validate(createProductSchema), createProductController);
+    .post(productLimiter, verifyUser, verifySeller, upload.array("images", 5), validate(createProductSchema), createProductController);
 
 router.route("/category/:categoryId")
     .get(getProductsByCategoryIdController);
 
 router.route("/all-products")
-    .get(verifyUser, verifyAdmin, getAllProductsController);
+    .get(verifyUser, userLimiter, verifyAdmin, getAllProductsController);
 
 router.route("/update-product/:id")
-    .patch(verifyUser, verifySeller, validate(updateProductSchema), updateProductController);
+    .patch(productLimiter, verifyUser, verifySeller, validate(updateProductSchema), updateProductController);
 
 router.route("/delete-product/:id")
-    .delete(verifyUser, verifySeller, deleteProductController);
+    .delete(productLimiter, verifyUser, verifySeller, deleteProductController);
 
 router.route("/toggle-is-active/:id")
-    .patch(verifyUser, verifySeller, toggleIsActiveController);
+    .patch(productLimiter, verifyUser, verifySeller, toggleIsActiveController);
 
 // implementing filtering & sorting
 // filtering => categoryId, minPrice, maxPrice  
